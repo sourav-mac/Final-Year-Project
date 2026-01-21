@@ -3,7 +3,6 @@ File handling utilities for media upload and processing.
 """
 
 import os
-import magic
 from werkzeug.utils import secure_filename
 from deepfake_detector.config import ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 
@@ -57,19 +56,7 @@ def get_file_type(filepath: str) -> str:
     if not os.path.exists(filepath):
         return 'unknown'
     
-    try:
-        mime = magic.from_file(filepath, mime=True)
-        
-        if mime.startswith('image/'):
-            return 'image'
-        elif mime.startswith('video/'):
-            return 'video'
-        elif mime.startswith('audio/'):
-            return 'audio'
-    except Exception:
-        pass
-    
-    # Fallback to extension-based detection
+    # Extension-based detection (simple and reliable)
     ext = os.path.splitext(filepath)[1].lower()
     
     if ext in {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}:
