@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f8f9ff;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background-color: #f0f2ff;
+        }
+        
+        .upload-area.drag-over {
+            border-color: #764ba2;
+            background-color: #e8ebff;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-subtext {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .file-info {
+            background: #f0f2ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .file-info.show {
+            display: block;
+        }
+        
+        .file-name {
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .file-size {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-analyze {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-analyze:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-analyze:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-clear {
+            background: #f0f2ff;
+            color: #667eea;
+            border: 1px solid #667eea;
+        }
+        
+        .btn-clear:hover:not(:disabled) {
+            background: #e8ebff;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f0f2ff;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #667eea;
+            font-size: 14px;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .result-box {
+            background: #f0f2ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .result-status {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .result-status.authentic {
+            color: #28a745;
+        }
+        
+        .result-status.deepfake {
+            color: #dc3545;
+        }
+        
+        .confidence-bar {
+            background: #e0e0e0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .predictions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .predictions-table th,
+        .predictions-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .predictions-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .predictions-table td {
+            color: #666;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge.authentic {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge.deepfake {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .metadata {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+        
+        .metadata-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .metadata-item:last-child {
+            border-bottom: none;
+        }
+        
+        .metadata-label {
+            color: #999;
+            font-weight: 500;
+        }
+        
+        .metadata-value {
+            color: #333;
+        }
+        
+        .download-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-download {
+            flex: 1;
+            background: #667eea;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-download:hover {
+            background: #764ba2;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .error {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Deepfake Detection System</h1>
+            <p>Educational AI-based platform for detecting manipulated media</p>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Click to upload or drag and drop</div>
+            <div class="upload-subtext">Supported: Images (JPG, PNG), Videos (MP4, AVI), Audio (WAV, MP3)</div>
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.bmp,.mp4,.avi,.mov,.mkv,.wav,.mp3,.m4a">
+        </div>
+        
+        <div class="file-info" id="fileInfo">
+            <div class="file-name" id="fileName"></div>
+            <div class="file-size" id="fileSize"></div>
+        </div>
+        
+        <div class="error" id="errorMessage"></div>
+        
+        <div class="button-group">
+            <button class="btn-analyze" id="analyzeBtn" disabled>🚀 Analyze</button>
+            <button class="btn-clear" id="clearBtn">🔄 Clear</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing media...</div>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="result-box">
+                <div class="result-status" id="resultStatus"></div>
+                <div id="confidenceContainer">
+                    <div>Confidence Score</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidenceFill"></div>
+                    </div>
+                    <div id="confidenceText" style="margin-top: 5px; color: #666; font-size: 12px;"></div>
+                </div>
+            </div>
+            
+            <div class="result-box">
+                <div style="font-weight: 600; margin-bottom: 15px;">Model Predictions</div>
+                <table class="predictions-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Prediction</th>
+                            <th>Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictionsBody">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="result-box">
+                <div style="font-weight: 600; margin-bottom: 10px;">Metadata</div>
+                <div class="metadata" id="metadataContainer">
+                </div>
+            </div>
+            
+            <div class="download-buttons">
+                <button class="btn-download" id="downloadJson">📄 JSON Report</button>
+                <button class="btn-download" id="downloadHtml">📋 HTML Report</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        let selectedFile = null;
+        
+        // File selection
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+        
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = `Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            fileInfo.classList.add('show');
+            analyzeBtn.disabled = false;
+            errorMessage.classList.remove('show');
+        }
+        
+        // Analyze
+        analyzeBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            loading.classList.add('show');
+            results.classList.remove('show');
+            errorMessage.classList.remove('show');
+            analyzeBtn.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Detection failed');
+                }
+                
+                displayResults(data);
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.classList.remove('show');
+                analyzeBtn.disabled = false;
+            }
+        });
+        
+        // Clear
+        clearBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            results.classList.remove('show');
+            errorMessage.classList.remove('show');
+            analyzeBtn.disabled = true;
+        });
+        
+        function displayResults(data) {
+            // Status
+            const resultStatus = document.getElementById('resultStatus');
+            if (data.is_deepfake) {
+                resultStatus.textContent = '⚠️ Likely Deepfake Detected';
+                resultStatus.className = 'result-status deepfake';
+            } else {
+                resultStatus.textContent = '✓ Authentic Media';
+                resultStatus.className = 'result-status authentic';
+            }
+            
+            // Confidence
+            const confidence = data.confidence * 100;
+            document.getElementById('confidenceFill').style.width = confidence + '%';
+            document.getElementById('confidenceText').textContent = `${confidence.toFixed(1)}%`;
+            
+            // Predictions
+            const predictionsBody = document.getElementById('predictionsBody');
+            predictionsBody.innerHTML = '';
+            
+            for (const [model, prediction] of Object.entries(data.model_predictions)) {
+                const confidenceScore = data.model_confidences[model] || 0;
+                const badgeClass = prediction ? 'deepfake' : 'authentic';
+                const predictionText = prediction ? 'Deepfake' : 'Authentic';
+                
+                const row = `
+                    <tr>
+                        <td>${model}</td>
+                        <td><span class="badge ${badgeClass}">${predictionText}</span></td>
+                        <td>${(confidenceScore * 100).toFixed(1)}%</td>
+                    </tr>
+                `;
+                predictionsBody.innerHTML += row;
+            }
+            
+            // Metadata
+            const metadataContainer = document.getElementById('metadataContainer');
+            metadataContainer.innerHTML = '';
+            
+            for (const [key, value] of Object.entries(data.metadata)) {
+                const item = `
+                    <div class="metadata-item">
+                        <span class="metadata-label">${key}</span>
+                        <span class="metadata-value">${String(value).substring(0, 50)}</span>
+                    </div>
+                `;
+                metadataContainer.innerHTML += item;
+            }
+            
+            // Download buttons
+            document.getElementById('downloadJson').onclick = () => {
+                downloadReport(data.json_report);
+            };
+            document.getElementById('downloadHtml').onclick = () => {
+                downloadReport(data.html_report);
+            };
+            
+            results.classList.add('show');
+        }
+        
+        function downloadReport(filename) {
+            const link = document.createElement('a');
+            link.href = `/api/report/${filename}`;
+            link.download = filename;
+            link.click();
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+    </script>
+</body>
+</html>
